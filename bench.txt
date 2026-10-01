@@ -1,0 +1,183 @@
+====================================================================================================
+BTS Flights — Naive vs Tuned benchmark (flights_v2)
+====================================================================================================
+Date       : 2026-09-30
+Host       : mv5jq8q8gv.asia-southeast1.gcp.clickhouse.cloud:9440  (ClickHouse 26.4.1)
+Dataset    : flights — 51,642,689 rows (2017–2024)
+Method     : clickhouse-benchmark, 3 warmup runs + 20 measured iterations per query;
+             executed sequentially per pair (naive → tuned) under identical server conditions.
+Stats      : p50 = median wall time per query (headline), p90 = tail.
+             rows/bytes read per run and result rows are derived from the aggregate (RPS/QPS).
+Fairness   : output equivalence of every pair verified before benchmarking (values, column
+             names, row order — see diff check). Tuned queries read pre-aggregated tables;
+             DDL/INSERT costs are NOT included (one-time build vs recurring read).
+
+----------------------------------------------------------------------------------------------------
+#1 Average departure and arrival delay by carrier, by month, over the full date range.
+Naive
+  elapsed     p50 0.625 s   p90 0.666 s
+  read        ~51,636,964 rows/run   (693.6 MiB/run)
+  result      ~1,523 rows
+  throughput  1.30 q/s
+Tuned
+  elapsed     p50 0.003 s   p90 0.004 s
+  read        ~1,523 rows/run   (80 KiB/run)
+  result      ~1,523 rows
+  throughput  6.27 q/s
+  → speedup   208.3x faster (p50), reads 33,906x fewer rows
+
+----------------------------------------------------------------------------------------------------
+#2 Top 20 routes (origin–destination pairs) by total flight volume and by average delay.
+Naive
+  elapsed     p50 0.478 s   p90 0.491 s
+  read        ~51,648,992 rows/run   (595.2 MiB/run)
+  result      ~20 rows
+  throughput  1.81 q/s
+Tuned
+  elapsed     p50 0.010 s   p90 0.011 s
+  read        ~100,981 rows/run   (4.6 MiB/run)
+  result      ~20 rows
+  throughput  11.01 q/s
+  → speedup   47.8x faster (p50), reads 511x fewer rows
+
+----------------------------------------------------------------------------------------------------
+#3 On-time percentage by airport, by year.
+Naive
+  elapsed     p50 0.354 s   p90 0.372 s
+  read        ~51,638,726 rows/run   (348.9 MiB/run)
+  result      ~1,927 rows
+  throughput  2.00 q/s
+Tuned
+  elapsed     p50 0.008 s   p90 0.010 s
+  read        ~100,982 rows/run   (2.1 MiB/run)
+  result      ~1,927 rows
+  throughput  7.40 q/s
+  → speedup   44.2x faster (p50), reads 511x fewer rows
+
+----------------------------------------------------------------------------------------------------
+#4 Number and percentage of flights cancelled, broken down by cancellation reason, by quarter.
+Naive
+  elapsed     p50 0.348 s   p90 0.361 s
+  read        ~51,645,499 rows/run   (57.5 MiB/run)
+  result      ~4 rows
+  throughput  2.17 q/s
+Tuned
+  elapsed     p50 0.003 s   p90 0.004 s
+  read        ~4 rows/run   (0 KiB/run)
+  result      ~4 rows
+  throughput  12.15 q/s
+  → speedup   116.0x faster (p50), reads 12,911,640x fewer rows
+
+----------------------------------------------------------------------------------------------------
+#5 All flights for a specific tail number (aircraft) on a specific date.
+Naive
+  elapsed     p50 0.033 s   p90 0.037 s
+  read        ~16,385 rows/run   (2.2 MiB/run)
+  result      ~6 rows
+  throughput  7.99 q/s
+Tuned
+  elapsed     p50 0.032 s   p90 0.037 s
+  read        ~16,384 rows/run   (2.2 MiB/run)
+  result      ~6 rows
+  throughput  9.20 q/s
+  → speedup   1.0x faster (p50), reads 1x fewer rows
+  note        same SELECT both sides — tuned = same query served by the prj_aircraft_date projection
+
+----------------------------------------------------------------------------------------------------
+#6 Distribution of departure delay (min, max, avg, p50, p90, p99) by day of week.
+Naive
+  elapsed     p50 1.369 s   p90 1.490 s
+  read        ~51,630,391 rows/run   (250.3 MiB/run)
+  result      ~7 rows
+  throughput  0.68 q/s
+Tuned — exact states (quantileExact, 6_tuned.sql)
+  elapsed     p50 1.381 s   p90 1.434 s
+  read        ~7 rows/run   (2 KiB/run)
+  result      ~7 rows
+  throughput  0.68 q/s
+  → speedup   0.99x — no win: the exact state holds every value, so merging
+                re-deserializes ~as much data as the raw scan. Exact = no free lunch.
+Tuned — approx states (quantile reservoir, 6_tuned2.sql)
+  elapsed     p50 0.007 s   p90 0.009 s
+  read        ~7 rows/run   (3 KiB/run)
+  result      ~7 rows
+  throughput  11.33 q/s
+  → speedup   196x faster (p50)
+  accuracy    p50 exact on all 7 days; p90 within 3 pts; worst p99 +10.1% (dow 1: 199→219).
+                min/max/avg identical. Reservoir sample (8192/dow) — error shrinks vs tail.
+  note        dow_summary now carries BOTH state families (p50/p90/p99 reservoir +
+                p50e/p90e/p99e exact) — one table, two accuracy/speed points.
+
+----------------------------------------------------------------------------------------------------
+#7 Total flights and average delay by airport and by carrier, joined with airport metadata (state, city, name).
+Naive
+  elapsed     p50 0.544 s   p90 0.579 s
+  read        ~51,657,005 rows/run   (595.3 MiB/run)
+  result      ~1,927 rows
+  throughput  1.37 q/s
+Tuned
+  elapsed     p50 0.012 s   p90 0.015 s
+  read        ~100,991 rows/run   (3.9 MiB/run)
+  result      ~1,926 rows
+  throughput  5.20 q/s
+  → speedup   45.3x faster (p50), reads 511x fewer rows
+
+----------------------------------------------------------------------------------------------------
+#8 Rolling 7-day average delay per major airport.
+Naive
+  elapsed     p50 0.442 s   p90 0.473 s
+  read        ~51,642,359 rows/run   (496.6 MiB/run)
+  result      ~10 rows
+  throughput  1.90 q/s
+Tuned
+  elapsed     p50 0.003 s   p90 0.003 s
+  read        ~386 rows/run   (14 KiB/run)
+  result      ~10 rows
+  throughput  12.32 q/s
+  → speedup   147.3x faster (p50), reads 133,791x fewer rows
+
+----------------------------------------------------------------------------------------------------
+#9 Count of flights per day across the entire dataset's history.
+Naive
+  elapsed     p50 0.172 s   p90 0.186 s
+  read        ~51,635,238 rows/run   (102.6 MiB/run)
+  result      ~2,922 rows
+  throughput  3.15 q/s
+Tuned
+  elapsed     p50 0.003 s   p90 0.003 s
+  read        ~2,922 rows/run   (51 KiB/run)
+  result      ~2,922 rows
+  throughput  3.10 q/s
+  → speedup   57.3x faster (p50), reads 17,671x fewer rows
+
+----------------------------------------------------------------------------------------------------
+#10 Carriers ranked by on-time performance for a given origin airport, for a given season (e.g. summer months).
+Naive
+  elapsed     p50 0.030 s   p90 0.034 s
+  read        ~1,146,952 rows/run   (8.5 MiB/run)
+  result      ~9 rows
+  throughput  7.97 q/s
+Tuned
+  elapsed     p50 0.030 s   p90 0.041 s
+  read        ~1,146,810 rows/run   (8.5 MiB/run)
+  result      ~9 rows
+  throughput  6.52 q/s
+  → speedup   1.0x faster (p50), reads 1x fewer rows
+  note        byte-identical query in both files — no tuned counterpart yet
+
+----------------------------------------------------------------------------------------------------
+SUMMARY (sorted by speedup)
+   #  naive p50  tuned p50  speedup   rows/read naive → tuned
+   1     0.625s     0.003s   208.3x       ~51,636,964 → ~1,523  
+  6a     1.369s     0.007s   195.6x       ~51,630,391 → ~7  approx
+   8     0.442s     0.003s   147.3x       ~51,642,359 → ~386  
+   4     0.348s     0.003s   116.0x       ~51,645,499 → ~4  
+   9     0.172s     0.003s    57.3x       ~51,635,238 → ~2,922  
+   2     0.478s     0.010s    47.8x       ~51,648,992 → ~100,981  
+   7     0.544s     0.012s    45.3x       ~51,657,005 → ~100,991  
+   3     0.354s     0.008s    44.2x       ~51,638,726 → ~100,982  
+   5     0.033s     0.032s     1.0x           ~16,385 → ~16,384  
+  10     0.030s     0.030s     1.0x        ~1,146,952 → ~1,146,810  
+  6b     1.369s     1.381s     1.0x       ~51,630,391 → ~7  exact
+
+6a = tuned approx states (6_tuned2.sql), 6b = tuned exact states (6_tuned.sql)
