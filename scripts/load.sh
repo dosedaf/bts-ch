@@ -23,9 +23,11 @@ echo "flights table ready"
 
 mkdir -p "$DATA_DIR"
 
-# BTS renames: lowercase header names to match the table, strip the .00
-# float suffix so Bool columns parse (0.00 -> 0, 1.00 -> 1).
+# BTS renames: strip header quotes, lowercase header names to match the
+# table, strip the .00 float suffix so Bool columns parse (0.00 -> 0, 1.00 -> 1).
 HEADER_SED=(
+  -e '1s/"//g'
+  -e '1s/^Year,/year,/'
   -e '1s/,FlightDate,/,flight_date,/'
   -e '1s/,Quarter,/,quarter,/'
   -e '1s/,DayOfWeek,/,day_of_week,/'
