@@ -53,8 +53,8 @@ HEADER_SED=(
 for year in $(seq "$FIRST_YEAR" "$LAST_YEAR"); do
   for month in $(seq 1 12); do
     name="On_Time_Reporting_Carrier_On_Time_Performance_${year}_${month}"
-    # transtats names recent years 501_..., older ranges 1987_present_...
-    for pattern in "501_${name}" "1987_present_${name}" "$name"; do
+    # transtats names the current series 1987_present_...
+    for pattern in "1987_present_${name}" "501_${name}"; do
       url="https://transtats.bts.gov/PREZIP/${pattern}.zip"
       if wget --no-check-certificate --continue -q -O "$DATA_DIR/$pattern.zip" "$url" 2>/dev/null; then
         unzip -cq "$DATA_DIR/$pattern.zip" '*.csv' \

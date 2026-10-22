@@ -10,11 +10,13 @@ cd "$(dirname "$0")/.."
 
 WARMUP=${WARMUP:-3}
 ITERS=${ITERS:-20}
-BENCH="docker compose exec -T clickhouse clickhouse-benchmark -w $WARMUP -i $ITERS"
+BENCH="docker compose exec -T clickhouse clickhouse-benchmark"
 
 # print the headline stats of one benchmark run, compact
+# clickhouse-benchmark has no warmup flag, so warmup is its own run
 run() {
-  $BENCH -q "$(cat "$1")" 2>/dev/null \
+  $BENCH -i "$WARMUP" -q "$(cat "$1")" >/dev/null 2>&1 || true
+  $BENCH -i "$ITERS" -q "$(cat "$1")" 2>/dev/null \
     | grep -E '^(QPS|median|90th percentile):' \
     | sed 's/,.*RPS.*//' \
     | tr '\n' ' '
