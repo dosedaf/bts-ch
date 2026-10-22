@@ -1,4 +1,18 @@
+<div align="center">
+  <br>
+  <img src="hook.png" alt="w hook rizz clickbait but true king" width="100%">
+  <br>
+</div>
+
+<p align="center">
+  BTS On-Time Performance (Air OnTime) · 2017-2024 · 51,642,689 rows · monthly CSVs · single node, ClickHouse 26.4.1
+</p>
+
 # bts-ch
+
+What i do is raw naive optimizations using ClickHouse's features skipping the data modelling step. This does not necessarily mean data modelling is not needed, it's just not what this repo is aiming for. Adding that step will only introduce unnecessary complexity :) *why with the informality you may ask? i just think if something like desc is written more human and not just some boring compact informational AI slop the world would be way cooler )) (russian smiley face btw)
+
+## detailed bench results
 
 <div align="center">
   <br>
@@ -7,17 +21,6 @@
   <br>
 </div>
 
-## dataset
-
-<p align="center">
-  BTS On-Time Performance (Air OnTime) · 2017-2024 · 51,642,689 rows · monthly CSVs · single node, ClickHouse 26.4.1
-</p>
-
-## benchmark
-
-| | |
-|---|---|
-| ![naive vs tuned p50 latency, log scale](results/charts/latency.png) | ![speedup p50, log scale](results/charts/speedup.png) |
 
 ## questions
 
