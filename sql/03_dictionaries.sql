@@ -1,10 +1,5 @@
--- Dictionaries used by the analytical queries.
--- airport_dict is built FROM flights itself, so apply after the data load
--- (load.sh runs this file right after 02_aggregates.sql).
-
 DROP DICTIONARY IF EXISTS airport_dict;
 
--- airport metadata (city, state) for query 7
 CREATE DICTIONARY airport_dict
 (
     id String,
@@ -20,12 +15,8 @@ SOURCE(CLICKHOUSE(
 LAYOUT(HASHED())
 LIFETIME(0);
 
--- sanity check:
--- select dictGet('airport_dict', 'city', '10135');
-
 DROP DICTIONARY IF EXISTS cancellation_reason_dict;
 
--- cancellation letter to human reason, explored for query 4
 CREATE DICTIONARY cancellation_reason_dict
 (
     code String,

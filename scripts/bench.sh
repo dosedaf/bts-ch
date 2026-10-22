@@ -1,9 +1,4 @@
 #!/usr/bin/env bash
-# Rerun the naive vs tuned benchmark locally with clickhouse-benchmark.
-# Method matches results/flights_benchmark.txt: 3 warmup runs, 20 measured
-# iterations per query, naive and tuned executed under identical conditions.
-#
-# Usage: scripts/bench.sh
 set -euo pipefail
 
 cd "$(dirname "$0")/.."
@@ -12,9 +7,6 @@ WARMUP=${WARMUP:-3}
 ITERS=${ITERS:-20}
 BENCH="docker compose exec -T clickhouse clickhouse-benchmark"
 
-# print the headline stats of one benchmark run, compact
-# clickhouse-benchmark has no warmup flag, so warmup is its own run,
-# and it writes everything to stderr
 run() {
   local q out
   q="$(cat "$1")"
@@ -33,7 +25,6 @@ for n in 1 2 3 4 5 6 7 8 9 10; do
   echo "query $n"
   printf '  naive\n'
   run "queries/naive/$n.sql"
-  # 6 has two tuned variants, everything else is one file per question
   for tuned in queries/tuned/${n}.sql queries/tuned/${n}_*.sql; do
     [ -e "$tuned" ] || continue
     printf '  tuned (%s)\n' "$(basename "$tuned")"

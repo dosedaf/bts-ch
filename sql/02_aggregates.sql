@@ -1,11 +1,3 @@
--- Tuned structures: summary tables, materialized views, projection, backfills.
--- Extracted from the original tuned queries, unchanged semantically.
--- Apply after data load (load.sh does 01, then data, then 02 and 03).
-
--- ====================================================================
--- 1. Average delay by carrier by month
---    serves queries/tuned/1.sql
--- ====================================================================
 DROP TABLE IF EXISTS mv_avg_delays_by_carrier_month;
 DROP TABLE IF EXISTS avg_delays_by_carrier_month;
 
@@ -28,7 +20,6 @@ SELECT
 FROM flights
 GROUP BY 1, 2;
 
--- backfill history; the MV covers inserts from now on
 INSERT INTO avg_delays_by_carrier_month
 SELECT
     dot_id_reporting_airline,
@@ -38,10 +29,6 @@ SELECT
 FROM flights
 GROUP BY 1, 2;
 
--- ====================================================================
--- 2. Route and carrier yearly summary
---    serves queries/tuned/2.sql, 3.sql, 7.sql
--- ====================================================================
 DROP TABLE IF EXISTS airport_routes_yearly_summary;
 
 CREATE TABLE airport_routes_yearly_summary
@@ -71,10 +58,6 @@ SELECT
 FROM flights
 GROUP BY 1, 2, 3, 4;
 
--- ====================================================================
--- 4. Cancellations by reason by quarter
---    serves queries/tuned/4.sql
--- ====================================================================
 DROP TABLE IF EXISTS quarterly_summary;
 
 CREATE TABLE quarterly_summary
@@ -102,10 +85,6 @@ SELECT
 FROM flights
 GROUP BY quarter;
 
--- ====================================================================
--- 5. Aircraft lookup on a date
---    projection on flights, serves queries/tuned/5.sql
--- ====================================================================
 ALTER TABLE flights DROP PROJECTION IF EXISTS prj_aircraft_date;
 ALTER TABLE flights ADD PROJECTION prj_aircraft_date
 (
@@ -114,11 +93,6 @@ ALTER TABLE flights ADD PROJECTION prj_aircraft_date
 );
 ALTER TABLE flights MATERIALIZE PROJECTION prj_aircraft_date;
 
--- ====================================================================
--- 6. Departure delay distribution by day of week
---    carries both quantile families: reservoir (fast) and exact
---    serves queries/tuned/6_approx.sql and 6_exact.sql
--- ====================================================================
 DROP TABLE IF EXISTS dow_summary;
 
 CREATE TABLE dow_summary
@@ -152,10 +126,6 @@ SELECT
 FROM flights
 GROUP BY day_of_week;
 
--- ====================================================================
--- 8. Rolling 7-day delay per destination airport
---    serves queries/tuned/8.sql
--- ====================================================================
 DROP TABLE IF EXISTS dest_airport_rolling_delay;
 
 CREATE TABLE dest_airport_rolling_delay
@@ -175,10 +145,6 @@ SELECT
 FROM flights
 GROUP BY dest_airport_id;
 
--- ====================================================================
--- 9. Flight counts per day
---    serves queries/tuned/9.sql
--- ====================================================================
 DROP TABLE IF EXISTS daily_summary;
 
 CREATE TABLE daily_summary
