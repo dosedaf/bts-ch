@@ -13,14 +13,17 @@ ITERS=${ITERS:-20}
 BENCH="docker compose exec -T clickhouse clickhouse-benchmark"
 
 # print the headline stats of one benchmark run, compact
-# clickhouse-benchmark has no warmup flag, so warmup is its own run
+# clickhouse-benchmark has no warmup flag, so warmup is its own run,
+# and it writes everything to stderr
 run() {
-  $BENCH -i "$WARMUP" -q "$(cat "$1")" >/dev/null 2>&1 || true
-  $BENCH -i "$ITERS" -q "$(cat "$1")" 2>/dev/null \
-    | grep -E '^(QPS|median|90th percentile):' \
-    | sed 's/,.*RPS.*//' \
-    | tr '\n' ' '
-  echo
+  local q out
+  q="$(cat "$1")"
+  $BENCH -i "$WARMUP" -q "$q" >/dev/null 2>&1 || true
+  out=$($BENCH -i "$ITERS" -q "$q" 2>&1)
+  printf '  p50 %s  p90 %s  qps %s\n' \
+    "$(awk '/^\s*50%/ {print $2}' <<<"$out")" \
+    "$(awk '/^\s*90%/ {print $2}' <<<"$out")" \
+    "$(grep -oE 'QPS: [0-9.]+' <<<"$out" | awk '{print $2}')"
 }
 
 echo "bts-ch local benchmark: $WARMUP warmup, $ITERS measured runs"
@@ -28,10 +31,12 @@ echo
 
 for n in 1 2 3 4 5 6 7 8 9 10; do
   echo "query $n"
-  printf '  naive  '
+  printf '  naive\n'
   run "queries/naive/$n.sql"
-  for tuned in queries/tuned/$n*.sql; do
-    printf '  tuned  '
+  # 6 has two tuned variants, everything else is one file per question
+  for tuned in queries/tuned/${n}.sql queries/tuned/${n}_*.sql; do
+    [ -e "$tuned" ] || continue
+    printf '  tuned (%s)\n' "$(basename "$tuned")"
     run "$tuned"
   done
 done
