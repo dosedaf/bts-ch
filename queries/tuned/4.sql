@@ -1,32 +1,5 @@
-drop table quarterly_summary;
-
-# make sure row count nya sama di source tablenya.
-
-CREATE TABLE quarterly_summary (
-  quarter UInt8,
-  total_cancelled_flights UInt64,
-  total_flights UInt64,
-  A UInt64,
-  B UInt64,
-  C UInt64,
-  D UInt64
-)
-ENGINE = SummingMergeTree()
-ORDER BY quarter;
-
-# find better schemma cuz this looks terrible
-
-INSERT INTO quarterly_summary
-SELECT
-  quarter,
-  countIf(cancelled) as total_cancelled_flights,
-  count() as total_flights,
-  countIf(cancellation_code = 'A') as A,
-  countIf(cancellation_code = 'B') as B,
-  countIf(cancellation_code = 'C') as C,
-  countIf(cancellation_code = 'D') as D
-FROM flights
-GROUP BY quarter;
+# 4. Number and percentage of flights cancelled, broken down by cancellation reason, by quarter.
+# served by quarterly_summary, see sql/02_aggregates.sql
 
 SELECT
   quarter,
@@ -40,5 +13,3 @@ FROM
   quarterly_summary
 GROUP BY quarter
 ORDER BY total_cancelled_flights DESC
-
-

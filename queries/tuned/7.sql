@@ -1,3 +1,7 @@
+# 7. Total flights and average delay by airport and by carrier, joined with airport metadata (state, city, name).
+# served by airport_routes_yearly_summary plus airport_dict
+# see sql/02_aggregates.sql and sql/03_dictionaries.sql
+
 SELECT
   dest_airport_id,
   dot_id_reporting_airline,

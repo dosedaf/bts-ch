@@ -1,4 +1,6 @@
 # 10. Carriers ranked by on-time performance for a given origin airport, for a given season (e.g. summer months).
+# identical to the naive side: the key range already skips most granules,
+# no tuned counterpart yet (bench: ~1.1M rows read either way)
 
 # input origin airport, given season, hardcoded months for summer
 

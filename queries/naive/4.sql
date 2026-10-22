@@ -1,26 +1,7 @@
 # 4. Number and percentage of flights cancelled, broken down by cancellation reason, by quarter.
+# cancellation_reason_dict lives in sql/03_dictionaries.sql
 
-CREATE DICTIONARY cancellation_reason_dict
-(
-    code String,
-    reason String
-)
-PRIMARY KEY code
-SOURCE(CLICKHOUSE(
-    user 'default'
-    password ''
-    QUERY '
-        SELECT ''A'' AS code, ''Air Carrier'' AS reason
-        UNION ALL SELECT ''B'', ''Weather''
-        UNION ALL SELECT ''C'', ''National Aviation System''
-        UNION ALL SELECT ''D'', ''Security''
-    '
-))
-LAYOUT(HASHED())
-LIFETIME(0);
-
-# 4. Number and percentage of flights cancelled, broken down by cancellation reason, by quarter.
-SELECT 
+SELECT
   quarter,
   countIf(cancelled) as total_cancelled_flights,
   countIf(cancelled) * 100 / count() as cancel_rate,
@@ -31,4 +12,3 @@ SELECT
   # dictGet('cancellation_reason_dict', 'reason', cancellation_code) as cancellation_reason
 FROM flights
 GROUP BY quarter
-

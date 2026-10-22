@@ -1,4 +1,5 @@
 # 7. Total flights and average delay by airport and by carrier, joined with airport metadata (state, city, name).
+# airport_dict lives in sql/03_dictionaries.sql, it is built from flights itself
 
 # avg delay pasti arr_del15, arrival, tapi airpot bisa aja arrival, bisa aja ngga, kata gua 2 2 nya ngefek ga sih. kek rute gitu. brati kita ambil 2 airport? 
 # atau emg nyari metrik delay arrival di airport A dgn reporting airline aja, ambigu jujur
@@ -10,24 +11,6 @@
 # 3. both, so more of a router airport a to airport b -> for a carrier, that dep from airport a to airport b. what's the delay usually look like
 
 # i'll go with num 2
-# SOURCE(CLICKHOUSE(QUERY 'SELECT PostId, countIf(VoteTypeId = 2) AS UpVotes, countIf(VoteTypeId = 3) AS DownVotes FROM votes GROUP BY PostId'))
-
-# risky kalo pake source origin doang. let's say ada airport yg emg dia ga dep tapi ambil arr aja. tp buat skrg keknya aman deh.
-CREATE DICTIONARY airport_dict (
-  id String,
-  city String,
-  state String
-)
-PRIMARY KEY id
-SOURCE(CLICKHOUSE(
-  user 'default'
-  password ''
-  QUERY 'select distinct origin_airport_id as id, origin_city_name as city, origin_state_name as state from flights'
-))
-LAYOUT(HASHED())
-LIFETIME(0);
-
-select dictGet('airport_dict', 'city', '10135');
 
 # airport metadata
 SELECT 
@@ -41,23 +24,3 @@ FROM flights
 GROUP BY (dest_airport_id, dot_id_reporting_airline)
 HAVING total_confirmed_flights > 1000
 ORDER BY avg_delay DESC
-
-/*
-SELECT 
-  origin_airport_id,
-  dot_id_reporting_airline,
-  sum(total_not_cancelled_flights), # re sum 
-  sum(avg_arr_delay),
-  sum(avg_arr_delay * total_not_cancelled_flights) / sum(total_not_cancelled_flights) as ovr_avg_arr_delay
-FROM (
-    SELECT
-        origin_airport_id,
-        dot_id_reporting_airline,
-        avgIf(arr_delay, cancelled = false) as avg_arr_delay,
-        countIf(cancelled = false) as total_not_cancelled_flights
-    FROM
-        flights
-    GROUP BY (origin_airport_id, dot_id_reporting_airline)
-    )
-GROUP BY (origin_airport_id, dot_id_reporting_airline)
-ORDER BY ovr_avg_arr_delay DESC

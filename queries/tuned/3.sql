@@ -1,3 +1,6 @@
+# 3. On-time percentage by airport, by year.
+# served by airport_routes_yearly_summary, see sql/02_aggregates.sql
+
 SELECT 
   dest_airport_id,
   year,

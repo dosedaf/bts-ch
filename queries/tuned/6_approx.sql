@@ -1,3 +1,7 @@
+# 6. Distribution of departure delay (min, max, avg, p50, p90, p99) by day of week.
+# reservoir quantile states: p50 exact on all 7 days, p90 within ~3 pts, worst p99 +10.1%
+# served by dow_summary, see sql/02_aggregates.sql
+
 SELECT
   day_of_week,
   min(min_dep_delay) as min_dep_delay,
