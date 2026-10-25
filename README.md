@@ -1,6 +1,6 @@
 <div align="center">
   <br>
-  <img src="hook.png" alt="w hook rizz clickbait but true king" width="100%">
+  <img src="hook.png" alt="w hook rizz clickbait but true king" width="440">
   <br>
 </div>
 
